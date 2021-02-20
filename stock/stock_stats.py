@@ -19,6 +19,7 @@ if __name__ == '__main__':
     stock = ts.get_hist_data(code, start=begin_time, end=end_time)
     # stock["date"] = stock.index.values  # 增加日期列。
     # stock = stock.sort_index(0)  # 将数据按照日期排序下。
+    ts.is_holiday()
     print(stock)
     # 初始化统计类
     # stockStat = stockstats.StockDataFrame.retype(pd.read_csv('002032.csv'))
