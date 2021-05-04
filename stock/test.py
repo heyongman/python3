@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 from datetime import datetime
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -5,6 +7,8 @@ import logging
 import numpy as np
 import pyecharts.options as opts
 from pyecharts.charts import Line
+import os
+import requests
 
 # logging.basicConfig(filename='D:/tmp/apscheduler.log', level=logging.INFO)
 
@@ -50,6 +54,15 @@ def echarts_test():
 
 
 if __name__ == '__main__':
-    echarts_test()
+    # 90.BK0459
+    res = requests.get('http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=0&klt=101&fields1=f1%2Cf2%2Cf3%2Cf7&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61%2Cf62%2Cf63%2Cf64%2Cf65&secid=90.BK0459')
+    res = res.json()['data']['klines']
+    res = pd.DataFrame(res, columns=['klines'])
+    data = res['klines'].str.split(',', expand=True)
+    data.to_csv('D:/data/dz/2020-12-2021-04.csv')
+
+
+
+
 
 
