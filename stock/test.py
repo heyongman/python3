@@ -1,3 +1,4 @@
+import json
 import time
 
 import pandas as pd
@@ -9,9 +10,13 @@ import pyecharts.options as opts
 from pyecharts.charts import Line
 import os
 import requests
+from urllib.parse import quote, urlencode
 
+import decimal as D
 # logging.basicConfig(filename='D:/tmp/apscheduler.log', level=logging.INFO)
-
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 1000)
 
 def job():
     print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -52,17 +57,26 @@ def echarts_test():
         .render("echarts_test.html")
     )
 
+board_dic = {
+    'dzqj': ['0/new_dzqj', '0.161903', -0.14, 0.82, 1, True],
+    'ljhy': ['0/new_ljhy', '0.399997', -0.1, 0.9, 1.3, True],
+    'swzz': ['0/new_swzz', '0.399989', -0.14, 0.8, 1.4, False],
+    'xny': ['1/gn_xny', '0.399808', -0.15, 0.9, 1.3, False],
+    'jrhy': ['0/new_jrhy', '1.512800', -0.15, 0.9, 1.3, True]
+}
+
+def filter_test():
+    df = pd.DataFrame(np.random.randint(1, 10, (2, 3)), columns=['asd_aa','as_b','aca'])
+    df = df.filter(regex=r'.*(?<!aa)$', axis=1)
+    print(df)
+
 
 if __name__ == '__main__':
-    # 90.BK0459
-    res = requests.get('http://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get?lmt=0&klt=101&fields1=f1%2Cf2%2Cf3%2Cf7&fields2=f51%2Cf52%2Cf53%2Cf54%2Cf55%2Cf56%2Cf57%2Cf58%2Cf59%2Cf60%2Cf61%2Cf62%2Cf63%2Cf64%2Cf65&secid=90.BK0459')
-    res = res.json()['data']['klines']
-    res = pd.DataFrame(res, columns=['klines'])
-    data = res['klines'].str.split(',', expand=True)
-    data.to_csv('D:/data/dz/2020-12-2021-04.csv')
-
-
-
-
-
+    param = {
+        'a':1,
+        'v':'ad ada' + json.dumps({'as_ad': 1.1})
+    }
+    print(str({'as_ad': 1.1}))
+    print(urlencode(param,encoding='utf-8'))
+    print(quote(param['v']))
 

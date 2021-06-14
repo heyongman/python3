@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset='UTF-8'>
+</head>
+<title>ESP配置</title>
+<body>
+    <div style="margin：0 auto;text-align:center;">
+        <span style="font-size:20px;">定时设置(转换为分钟,空格分隔多个)：</span></br>
+        <input id="cron" type="text" style="width: 200px;height:60px;font-size:20px;"/>
+        <button type="button" onclick="cronSet();" style="width: 100px;height:60px;font-size:20px;">提交</button>
+    </div>
+
+    <script>
+        var xhttp = new XMLHttpRequest();
+        function resAlert() {
+            alert(xhttp.responseText);
+        }
+        xhttp.onload = resAlert
+        xhttp.onerror = resAlert
+
+        function syncTime(){
+            var now = new Date();
+            var time = now.getFullYear().toString()+","+(now.getMonth()+1).toString()+","+now.getDate().toString()+","+now.getDay().toString()+","+now.getHours().toString()+","+now.getMinutes().toString()+","+now.getSeconds().toString()+","+now.getMilliseconds().toString();
+            xhttp.open('GET', '/time?time='+time, true);
+            xhttp.send();
+        }
+
+        function cronSet(){
+            cron = document.getElementById("cron").value.trim()
+            if ("" == cron) {
+                alert("定时不能为空");
+                return;
+            }
+            xhttp.open('GET', '/cron?cron='+cron, true);
+            xhttp.send();
+        }
+
+        function cronGet(){
+            xhttp.open('GET', '/cron?cron='+cron, true);
+            xhttp.send();
+        }
+
+        syncTime();
+    </script>
+</body>
+</html>
