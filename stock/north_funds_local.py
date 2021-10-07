@@ -10,11 +10,11 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
 board_dic = {
-    'xny': ['1/gn_xny', '1.515030', -0.08, 0.9, 1.3, False],
-    'lj': ['0/new_ljhy', '0.161725', -0.1, 0.9, 1.3, True],
-    'xp': ['0/new_dzqj', '0.161903', -0.12, 0.82, 1, True],
-    'yl': ['0/new_swzz', '1.512170', -0.12, 0.8, 1.4, False],
-    'jr': ['0/new_jrhy', '0.399986', -0.1, 0.9, 0.8, True]
+    'xny':  ['1/gn_xny', '0.399808', -0.08, 0.9, 1.3, False],
+    'lj': ['0/new_ljhy', '0.399997', -0.1, 0.9, 1.3, True],
+    'xp': ['0/new_dzqj', '2.H30184', -0.12, 0.82, 1, True],
+    'yl': ['0/new_swzz', '0.399989', -0.12, 0.8, 1.4, False],
+    'jr': ['0/new_jrhy', '0.399975', -0.1, 0.9, 0.8, True]
 }
 
 dist_dic = {
@@ -303,12 +303,12 @@ class NorthFunds:
 # 当天9:00计算boll,通知
 # baijiu:0.399997/0.161725, wanjia:0.161903, yiliao:1.512170, xny:1.515030
 if __name__ == '__main__':
-    northFunds = NorthFunds(200)
+    northFunds = NorthFunds(300)
     north_df, action_df = northFunds.get_action()
     mer_df = northFunds.draw(north_df, action_df)
     mer_df = mer_df.filter(regex=r'date|m|R', axis=1)
     mer_df['m'].iloc[-1] = '-'
     print(mer_df.dropna(subset=['m']).fillna(value='-').drop(columns=['m']))
-    # print(northFunds.query_security('990001'))
+    # print(northFunds.query_security('30184'))
     # print(northFunds.load_close('125.990001','a'))
 
