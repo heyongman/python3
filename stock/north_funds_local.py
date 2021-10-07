@@ -1,12 +1,8 @@
-import json
-import math
-
-import numpy as np
 import pandas as pd
 import pyecharts.options as opts
 import requests
 from pyecharts.charts import Line, Page
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:ECDHE:!COMPLEMENTOFDEFAULT"
 
 pd.set_option('display.max_columns', None)
@@ -14,19 +10,19 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
 board_dic = {
-    'ljhy': ['0/new_ljhy', '0.399997', -0.1, 0.9, 1.3, True],
-    'dzqj': ['0/new_dzqj', '0.161903', -0.12, 0.82, 1, True],
-    # 'swzz': ['0/new_swzz', '0.399989', -0.12, 0.8, 1.4, False],
-    # 'xny': ['1/gn_xny', '0.399808', -0.08, 0.9, 1.3, False],
-    # 'jrhy': ['0/new_jrhy', '0.399986', -0.15, 0.9, 0.8, True]
+    'xny': ['1/gn_xny', '1.515030', -0.08, 0.9, 1.3, False],
+    'lj': ['0/new_ljhy', '0.161725', -0.1, 0.9, 1.3, True],
+    'xp': ['0/new_dzqj', '0.161903', -0.12, 0.82, 1, True],
+    'yl': ['0/new_swzz', '1.512170', -0.12, 0.8, 1.4, False],
+    'jr': ['0/new_jrhy', '0.399986', -0.1, 0.9, 0.8, True]
 }
 
 dist_dic = {
-    'BK0896': 'ljhy',  # 白酒
-    # 'BK0900': 'xny',  # 新能源车
-    'BK0891': 'dzqj',  # 国产芯片
-    # 'BK0668': 'swzz',  # 医疗器械
-    # # '802090': 'jrhy'  # 非银行金融
+    'BK0900': 'xny',
+    'BK0896': 'lj',
+    'BK0891': 'xp',
+    'BK0668': 'yl',
+    'BK0637': 'jr'
 }
 
 
@@ -52,7 +48,7 @@ class NorthFunds:
         # 行业板块增持
         self.board_his_url = 'http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_zjlrqs?sort=opendate&asc=0'
         self.board_zc_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=BOARD_CODE,BOARD_INNER_CODE,BOARD_NAME,TRADE_DATE,COMPOSITION_QUANTITY,HOLD_MARKET_CAP,ADD_MARKET_CAP,ADD_SHARES_AMP,MAXHOLD_SECURITY_CODE,MAXHOLD_SECUCODE,MAXHOLD_SECURITY_NAME,MAXADD_SECURITY_CODE,MAXADD_SECUCODE,MAXADD_SECURITY_NAME&callback=&extraCols=&filter=(INTERVAL_TYPE%3D%221%22)(BOARD_CODE%3D%22BK0896%22)&sr=-1,-1&st=TRADE_DATE,COMPOSITION_QUANTITY&token=&var=&source=DataCenter&client=APP'
-        self.board_dist_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=BOARD_CODE,ADD_MARKET_CAP&filter=(TRADE_DATE%3D%272021-02-03%27)(BOARD_TYPE%3D%224%22)(INTERVAL_TYPE%3D%221%22)&p=1&ps=100&sr=-1&st=ADD_MARKET_CAP&token=&var=&source=DataCenter&client=APP'
+        self.board_dist_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=HOLD_MARKET_CAP,BOARD_CODE&callback=&extraCols=&filter=(TRADE_DATE%3D%272021-07-09%27)(BOARD_TYPE%3D%224%22)(INTERVAL_TYPE%3D%221%22)&p=1&ps=100&sr=-1&st=HOLD_MARKET_CAP&token=&var=&source=DataCenter&client=APP'
         self.window = 150
         self.std_n = 2
         self.limit = limit
@@ -76,7 +72,7 @@ class NorthFunds:
             res += requests.get(url=self.north_his_url, params={'p': 3}).json()['result']['data']
         data = pd.DataFrame(res[:self.limit+self.window])
         data.rename(columns={'TRADE_DATE': 'date', 'NET_DEAL_AMT': 'north_add'}, inplace=True)
-        data['north_add'] = (data['north_add']/100).round(decimals=2)
+        data['north_add'] = (data['north_add']/100)
         data['date'] = data['date'].str[:10]
         data.sort_values(by='date', inplace=True)
         return data
@@ -101,7 +97,7 @@ class NorthFunds:
         data = requests.get(self.board_his_url, params=params).json()
         data = pd.DataFrame(data)
         data.rename(columns={'opendate': 'date', 'r0_net': 'board_add'}, inplace=True)
-        data[alias+'_board_add'] = (data['board_add'].astype('float')/100000000).round(decimals=2)
+        data[alias+'_board_add'] = (data['board_add'].astype('float')/100000000)
         data = data[['date', alias+'_board_add']]
         data.sort_values(by='date', inplace=True)
         return data
@@ -128,12 +124,12 @@ class NorthFunds:
     # {'ljhy': 0.6, 'dzqj': 0.4}
     # 2019-11-21
     def get_dist_pct(self, date):
-        # res = requests.get(self.board_dist_url.replace('2021-02-03', date)).json()['result']['data']
-        # res = [x for x in res if x['BOARD_CODE'] in dist_dic.keys()][:1]
-        # total = sum([x['ADD_MARKET_CAP'] for x in res])
+        res = requests.get(self.board_dist_url.replace('2021-07-09', date)).json()['result']['data']
+        res = [x for x in res if x['BOARD_CODE'] in dist_dic.keys()][:1]
+        # total = sum([x['HOLD_MARKET_CAP'] for x in res])
         # res = {dist_dic[x['BOARD_CODE']]: round(x['ADD_MARKET_CAP']/total, 1) for x in res}
-        # res = {dist_dic[res[0]['BOARD_CODE']]: 1}
-        res = {x: 1/len(board_dic) for x in board_dic.keys()}
+        res = {dist_dic[res[0]['BOARD_CODE']]: 1}
+        # res = {x: 1/len(board_dic) for x in board_dic.keys()}
         return res
 
     # 升序
@@ -181,7 +177,7 @@ class NorthFunds:
             inc_sig_list.append(pos * (x[alias + '_close'] - x[alias + '_close_last']))
         for alias, board_list in board_dic.items():
             signal = None
-            if x[alias+'_add'] > 0 and x[alias+'_add'] / x[alias+'_upper'] > board_list[3] and self.position[alias] < 1 and sum(self.position.values()) < 1:
+            if x[alias+'_add'] > 0 and x[alias+'_add'] / x[alias+'_upper'] > board_list[3] and self.position[alias] <= 0 and sum(self.position.values()) < 1:
                 if not pos_pct:
                     pos_pct = self.get_dist_pct(x.date)
                 if pos_pct.get(alias) and pos_pct[alias] > 0:
@@ -193,27 +189,30 @@ class NorthFunds:
                 last_order_date = self.last_order_dic.pop(alias)
                 signal = 'SELL'
                 stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, last_order_date)
-                print(alias, last_order_date, x.date, stage_rate, 'SELL')
+                # print(alias, last_order_date, x.date, stage_rate, 'SELL')
             # 强平
             if self.position[alias] > 0 and not self.last_order_dic[alias] == x.date:
                 stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, self.last_order_dic[alias])
                 if lose_rate < board_list[2]:
                     self.position[alias] = 0
-                    last_order_date = self.last_order_dic.pop(alias)
                     signal = 'CLOSE'
+                    # last_order_date = self.last_order_dic.pop(alias)
                     # print(alias, last_order_date, x.date, stage_rate, 'CLOSE', lose_rate)
             inc_sig_list.append(signal)
-            if x.date == north_data['date'].iloc[-1] and self.last_order_dic.get(alias):
-                last_order_date = self.last_order_dic[alias]
-                stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, last_order_date)
+            # if x.date == north_data['date'].iloc[-1] and self.last_order_dic.get(alias):
+            #     last_order_date = self.last_order_dic[alias]
+            #     stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, last_order_date)
                 # print(alias, last_order_date, x.date, stage_rate)
-            if x.date == north_data['date'].iloc[-1] and signal:
+            if x.date == north_data['date'].iloc[-1]:
+                if not signal:
+                    signal = "Morning"
                 params = {
-                    "head": signal,
-                    "body": "%s A:%s H:%s L:%s" % (x.date, x[alias+'_add'], x[alias+'_upper'], x[alias+'_lower'])
+                    "head": signal+'-'+alias.upper()+'-'+x.date,
+                    "body": "A:%s H:%s L:%s" % (x[alias+'_add'], x[alias+'_upper'], x[alias+'_lower'])
                 }
-                print(params)
-                requests.get(self.wechat_url + urlencode(params))
+                # print(params)
+                # if signal != 'Morning' or alias == 'lj':
+                #     requests.get(self.wechat_url + urlencode(params))
         return inc_sig_list
 
     def get_action(self):
@@ -223,7 +222,7 @@ class NorthFunds:
             # board_his_data = self.load_board_zc(board_list[6], alias)
             north_data = north_data.merge(board_his_data, how='inner', on='date')
             if board_list[5]:
-                north_data[alias+'_add'] = (north_data[alias+'_board_add']/1.5).round(decimals=2) + north_data['north_add']
+                north_data[alias+'_add'] = ((north_data[alias+'_board_add']/1.5) + north_data['north_add']).round(decimals=2)
             else:
                 north_data[alias+'_add'] = north_data['north_add'].round(decimals=2)
             # north_data.drop(columns=[alias+'_board_add'], inplace=True)
@@ -245,18 +244,18 @@ class NorthFunds:
             north_data[alias + '_inc'] = action_df[i]
             i += 1
         for alias, board_list in board_dic.items():
-            north_data[alias+'_mark'] = action_df[i]
+            north_data[alias+'_m'] = action_df[i]
             i += 1
 
-        north_data['return_rate'] = 0.0
-        north_data['mark'] = None
+        north_data['R'] = 0.0
+        north_data['m'] = None
         for alias, board_list in board_dic.items():
-            north_data['return_rate'] += north_data[alias + '_inc'].cumsum() * 100 / north_data[alias + '_close'].iloc[0]
-            north_data['mark'] = north_data['mark'].fillna(north_data[alias+'_mark'])
-        north_data = north_data.round({'return_rate': 1})
+            north_data['R'] += north_data[alias + '_inc'].cumsum() * 100 / north_data[alias + '_close'].iloc[0]
+            north_data['m'] = north_data['m'].fillna(north_data[alias+'_m'])
+        north_data = north_data.round({'R': 1})
         return north_data
         mark_opts = []
-        north_data.dropna(subset=['mark']).apply(lambda x: mark_fun(x.date, x.mark, x.return_rate, mark_opts), axis=1)
+        north_data.dropna(subset=['m']).apply(lambda x: mark_fun(x.date, x.m, x.return_rate, mark_opts), axis=1)
         markpoint_opts = opts.MarkPointOpts(data=mark_opts, symbol_size=25, label_opts=opts.LabelOpts(position="inside", color="#fff", font_size=6))
         first_alias = list(board_dic.keys())[0]
         bench_list = ((north_data[first_alias + '_close']-north_data[first_alias + '_close_last']).cumsum()*100/north_data[first_alias + '_close'].iloc[0]).tolist()
@@ -264,7 +263,7 @@ class NorthFunds:
         multi_line = (
             Line()
             .add_xaxis(north_data['date'].tolist())
-            .add_yaxis('return_rate', north_data['return_rate'].tolist(), is_symbol_show=False, markpoint_opts=markpoint_opts, linestyle_opts=opts.LineStyleOpts(color='#FF0000'))
+            .add_yaxis('R', north_data['R'].tolist(), is_symbol_show=False, markpoint_opts=markpoint_opts, linestyle_opts=opts.LineStyleOpts(color='#FF0000'))
             .add_yaxis('bj', bench_list, is_symbol_show=False, linestyle_opts=opts.LineStyleOpts(color='#000000'))
             .set_global_opts(
                 title_opts=opts.TitleOpts(title='North'),
@@ -304,11 +303,12 @@ class NorthFunds:
 # 当天9:00计算boll,通知
 # baijiu:0.399997/0.161725, wanjia:0.161903, yiliao:1.512170, xny:1.515030
 if __name__ == '__main__':
-    northFunds = NorthFunds(100)
+    northFunds = NorthFunds(200)
     north_df, action_df = northFunds.get_action()
     mer_df = northFunds.draw(north_df, action_df)
-    # .filter(regex=r'.*(?<!add)$', axis=1).filter(regex=r'.*(?<!upper)$', axis=1).filter(regex=r'.*(?<!lower)$', axis=1)
-    mer_df = mer_df.filter(regex=r'.*(?<!board_add)$', axis=1).filter(regex=r'.*(?<!close)$', axis=1).filter(regex=r'.*(?<!last)$', axis=1).filter(regex=r'.*(?<!inc)$', axis=1)
-    print(mer_df.dropna(subset=['mark'])[-2:])
-    # print(northFunds.query_security('512480'))
+    mer_df = mer_df.filter(regex=r'date|m|R', axis=1)
+    mer_df['m'].iloc[-1] = '-'
+    print(mer_df.dropna(subset=['m']).fillna(value='-').drop(columns=['m']))
+    # print(northFunds.query_security('990001'))
+    # print(northFunds.load_close('125.990001','a'))
 

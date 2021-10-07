@@ -168,7 +168,7 @@ def deep_sleep():
     print('sleep %d min,curr time:%s' % (sleep_time, str(t)))
     rtc = RTC()
     rtc.irq(trigger=rtc.ALARM0, wake=DEEPSLEEP)
-    rtc.alarm(rtc.ALARM0, sleep_time * 69000)
+    rtc.alarm(rtc.ALARM0, sleep_time * 75000)
     led.off()
     machine.deepsleep()
 
