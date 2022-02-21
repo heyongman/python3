@@ -1,9 +1,9 @@
+#!/data/data/com.termux/files/usr/bin/python
 import pandas as pd
-import pyecharts.options as opts
 import requests
-from pyecharts.charts import Line, Page
 from urllib.parse import urlencode
-requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:ECDHE:!COMPLEMENTOFDEFAULT"
+from datetime import datetime
+# requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS = "TLS13-CHACHA20-POLY1305-SHA256:TLS13-AES-128-GCM-SHA256:TLS13-AES-256-GCM-SHA384:ECDHE:!COMPLEMENTOFDEFAULT"
 
 pd.set_option('display.max_columns', None)
 # pd.set_option('display.max_rows', None)
@@ -48,7 +48,7 @@ class NorthFunds:
         # 行业板块增持
         self.board_his_url = 'http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_zjlrqs?sort=opendate&asc=0'
         self.board_zc_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=BOARD_CODE,BOARD_INNER_CODE,BOARD_NAME,TRADE_DATE,COMPOSITION_QUANTITY,HOLD_MARKET_CAP,ADD_MARKET_CAP,ADD_SHARES_AMP,MAXHOLD_SECURITY_CODE,MAXHOLD_SECUCODE,MAXHOLD_SECURITY_NAME,MAXADD_SECURITY_CODE,MAXADD_SECUCODE,MAXADD_SECURITY_NAME&callback=&extraCols=&filter=(INTERVAL_TYPE%3D%221%22)(BOARD_CODE%3D%22BK0896%22)&sr=-1,-1&st=TRADE_DATE,COMPOSITION_QUANTITY&token=&var=&source=DataCenter&client=APP'
-        self.board_dist_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=HOLD_MARKET_CAP,BOARD_CODE&callback=&extraCols=&filter=(TRADE_DATE%3D%272021-07-09%27)(BOARD_TYPE%3D%224%22)(INTERVAL_TYPE%3D%221%22)&p=1&ps=100&sr=-1&st=HOLD_MARKET_CAP&token=&var=&source=DataCenter&client=APP'
+        self.board_dist_url = 'https://datacenter.eastmoney.com/securities/api/data/get?type=RPT_MUTUAL_BOARD_HOLDRANK&sty=HOLD_MARKET_CAP,BOARD_CODE&callback=&extraCols=&filter=(TRADE_DATE%3D%272021-07-09%27)(BOARD_TYPE%3D%224%22)(INTERVAL_TYPE%3D%221%22)&p=1&ps=25&sr=-1&st=HOLD_MARKET_CAP&token=&var=&source=DataCenter&client=APP'
         self.window = 150
         self.std_n = 2
         self.limit = limit
@@ -186,46 +186,41 @@ class NorthFunds:
                     signal = 'BUY'
             elif x[alias+'_add'] < 0 and x[alias+'_add'] / x[alias+'_lower'] > board_list[4] and self.position[alias] > 0:
                 self.position[alias] = 0
-                last_order_date = self.last_order_dic.pop(alias)
                 signal = 'SELL'
-                stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, last_order_date)
-                # print(alias, last_order_date, x.date, stage_rate, 'SELL')
             # 强平
             if self.position[alias] > 0 and not self.last_order_dic[alias] == x.date:
                 stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, self.last_order_dic[alias])
                 if lose_rate < board_list[2]:
                     self.position[alias] = 0
                     signal = 'CLOSE'
-                    # last_order_date = self.last_order_dic.pop(alias)
-                    # print(alias, last_order_date, x.date, stage_rate, 'CLOSE', lose_rate)
             inc_sig_list.append(signal)
-            # if x.date == north_data['date'].iloc[-1] and self.last_order_dic.get(alias):
-            #     last_order_date = self.last_order_dic[alias]
-            #     stage_rate, lose_rate = self.get_stage_rate(north_data, x.date, alias, last_order_date)
-                # print(alias, last_order_date, x.date, stage_rate)
             if x.date == north_data['date'].iloc[-1]:
                 if not signal:
-                    signal = "Morning"
-                params = {
-                    "head": signal+'-'+alias.upper()+'-'+x.date,
-                    "body": "A:%s H:%s L:%s" % (x[alias+'_add'], x[alias+'_upper'], x[alias+'_lower'])
-                }
-                # print(params)
-                # if signal != 'Morning' or alias == 'lj':
-                #     requests.get(self.wechat_url + urlencode(params))
+                    try:
+                        pos_pct = self.get_dist_pct(x.date)
+                    except:
+                        pos_pct = self.get_dist_pct(north_data['date'].iloc[-2])
+                    if pos_pct.get(alias):
+                        signal = "Morning"
+
+                if signal:
+                    params = {
+                        "head": signal + '-' + alias.upper() + '-' + x.date,
+                        "body": "A:%s H:%s L:%s" % (x[alias + '_add'], x[alias + '_upper'], x[alias + '_lower'])
+                    }
+                    # print(params)
+                    requests.get(self.wechat_url + urlencode(params))
         return inc_sig_list
 
     def get_action(self):
         north_data = self.load_north_his()
         for alias, board_list in board_dic.items():
             board_his_data = self.load_board_his(board_list[0], alias)
-            # board_his_data = self.load_board_zc(board_list[6], alias)
             north_data = north_data.merge(board_his_data, how='inner', on='date')
             if board_list[5]:
                 north_data[alias+'_add'] = ((north_data[alias+'_board_add']/1.5) + north_data['north_add']).round(decimals=2)
             else:
                 north_data[alias+'_add'] = north_data['north_add'].round(decimals=2)
-            # north_data.drop(columns=[alias+'_board_add'], inplace=True)
             self.get_boll(north_data, alias)
 
         north_data.dropna(subset=[list(board_dic.keys())[0]+'_upper'], inplace=True)
@@ -254,61 +249,17 @@ class NorthFunds:
             north_data['m'] = north_data['m'].fillna(north_data[alias+'_m'])
         north_data = north_data.round({'R': 1})
         return north_data
-        mark_opts = []
-        north_data.dropna(subset=['m']).apply(lambda x: mark_fun(x.date, x.m, x.return_rate, mark_opts), axis=1)
-        markpoint_opts = opts.MarkPointOpts(data=mark_opts, symbol_size=25, label_opts=opts.LabelOpts(position="inside", color="#fff", font_size=6))
-        first_alias = list(board_dic.keys())[0]
-        bench_list = ((north_data[first_alias + '_close']-north_data[first_alias + '_close_last']).cumsum()*100/north_data[first_alias + '_close'].iloc[0]).tolist()
-
-        multi_line = (
-            Line()
-            .add_xaxis(north_data['date'].tolist())
-            .add_yaxis('R', north_data['R'].tolist(), is_symbol_show=False, markpoint_opts=markpoint_opts, linestyle_opts=opts.LineStyleOpts(color='#FF0000'))
-            .add_yaxis('bj', bench_list, is_symbol_show=False, linestyle_opts=opts.LineStyleOpts(color='#000000'))
-            .set_global_opts(
-                title_opts=opts.TitleOpts(title='North'),
-                xaxis_opts=opts.AxisOpts(is_scale=True),
-                yaxis_opts=opts.AxisOpts(type_="value", name="Rate(%)", position="right"),
-                tooltip_opts=opts.TooltipOpts(trigger='axis'),
-                datazoom_opts=[opts.DataZoomOpts(pos_bottom="-2%", range_start=0, range_end=100)]
-            )
-        )
-
-        page = Page(layout=Page.DraggablePageLayout)
-        page.add(multi_line)
-
-        for alias, board_list in board_dic.items():
-            close_line = (
-                Line()
-                .add_xaxis(north_data['date'].tolist())
-                .add_yaxis('close', north_data[alias+'_close'].tolist(), is_symbol_show=False, yaxis_index=0, linestyle_opts=opts.LineStyleOpts(color='#FF0000'))
-                .extend_axis(yaxis=opts.AxisOpts(type_="value", name="ADD", position="left"))
-                .add_yaxis('add', north_data[alias+'_add'].tolist(), is_symbol_show=False, yaxis_index=1, linestyle_opts=opts.LineStyleOpts(color='#000000'))
-                .add_yaxis('upper', north_data[alias+'_upper'].tolist(), is_symbol_show=False, yaxis_index=1, linestyle_opts=opts.LineStyleOpts(color='#FFA500'))
-                .add_yaxis('lower', north_data[alias+'_lower'].tolist(), is_symbol_show=False, yaxis_index=1, linestyle_opts=opts.LineStyleOpts(color='#1E90FF'))
-                .set_global_opts(
-                    title_opts=opts.TitleOpts(title=alias),
-                    xaxis_opts=opts.AxisOpts(is_scale=True),
-                    yaxis_opts=opts.AxisOpts(type_="value", name="Close", position="right"),
-                    tooltip_opts=opts.TooltipOpts(trigger='axis'),
-                    datazoom_opts=[opts.DataZoomOpts(pos_bottom="-2%", range_start=0, range_end=100)]
-                )
-            )
-            page.add(close_line)
-        page.render('north_funds.html')
-        return north_data
 
 
-# 2:50-3:00每25秒比对一次实时数据,满足条件通知
-# 当天9:00计算boll,通知
-# baijiu:0.399997/0.161725, wanjia:0.161903, yiliao:1.512170, xny:1.515030
 if __name__ == '__main__':
-    northFunds = NorthFunds(300)
+    northFunds = NorthFunds(100)
     north_df, action_df = northFunds.get_action()
     mer_df = northFunds.draw(north_df, action_df)
     mer_df = mer_df.filter(regex=r'date|m|R', axis=1)
     mer_df['m'].iloc[-1] = '-'
     print(mer_df.dropna(subset=['m']).fillna(value='-').drop(columns=['m']))
+    with open('north.log', 'w') as f:
+        f.write('%s\n%s' % (datetime.now(), mer_df.to_string()))
     # print(northFunds.query_security('30184'))
     # print(northFunds.load_close('125.990001','a'))
 

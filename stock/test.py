@@ -72,11 +72,14 @@ def filter_test():
 
 
 if __name__ == '__main__':
-    param = {
-        'a':1,
-        'v':'ad ada' + json.dumps({'as_ad': 1.1})
-    }
-    print(str({'as_ad': 1.1}))
-    print(urlencode(param,encoding='utf-8'))
-    print(quote(param['v']))
+    print(datetime.now())
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    pd.DataFrame([]).to_string
+    # param = {
+    #     'a':1,
+    #     'v':'ad ada' + json.dumps({'as_ad': 1.1})
+    # }
+    # print(str({'as_ad': 1.1}))
+    # print(urlencode(param,encoding='utf-8'))
+    # print(quote(param['v']))
 
